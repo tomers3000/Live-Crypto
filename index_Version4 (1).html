@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Live Crypto: BTC & ETH</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #151c34;
+      --ink: #e9eefc;
+      --muted: #93a0c6;
+      --up: #18c77c;
+      --down: #ff6b6b;
+      --accent: #6aa4ff;
+      --low-volume-bg: #7a88a0;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: linear-gradient(180deg, #0b1020, #0e1530);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .wrap {
+      width: min(980px, 100%);
+      margin: auto;
+    }
+
+    header {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    button {
+      background: var(--accent);
+      color: #081025;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(106, 164, 255, .25);
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--card), #11182e);
+      border: 1px solid rgba(255, 255, 255, .06);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .35);
+    }
+    
+    .news-card {
+      margin-top: 16px;
+      grid-column: 1 / -1;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .asset {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, .06);
+      font-size: 22px;
+    }
+
+    .sym {
+      font-weight: 800;
+      letter-spacing: .5px;
+    }
+
+    .name {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .price {
+      font-feature-settings: "tnum" 1, "lnum" 1;
+      font-variant-numeric: tabular-nums;
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    .sub {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .err {
+      color: #ffb3b3
+    }
+
+    footer {
+      margin-top: 14px
+    }
+
+    a {
+      color: #a9c7ff
+    }
+
+    .chart-container {
+      margin-top: 16px;
+      position: relative;
+      height: 120px;
+    }
+
+    .gauge-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+
+    .chart-spinner {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      color: var(--muted);
+      pointer-events: none;
+      z-index: 10;
+      display: none;
+    }
+
+    .levels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    .levels .support {
+      color: var(--up);
+    }
+
+    .levels .resistance {
+      color: var(--down);
+    }
+
+    .volume-indicator {
+      margin-top: 8px;
+      font-size: 12px;
+      text-align: center;
+      border-radius: 8px;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .volume-indicator.high {
+      background: var(--accent);
+      color: black;
+    }
+    
+    .volume-indicator.low {
+      background: var(--low-volume-bg);
+      color: var(--ink);
+    }
+
+    .volume-stats {
+      margin-top: 8px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        font-size: 18px;
+      }
+      .price { font-size: 22px; }
+      h1 { font-size: 18px; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2/dist/chartjs-plugin-annotation.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Live Crypto — BTC & ETH</h1>
+      <div class="controls">
+        <button id="refreshBtn" title="Manual refresh" aria-label="Refresh data now">Refresh Now</button>
+        <span id="lastUpdated" class="muted">Updating…</span>
+      </div>
+    </header>
+
+    <section class="grid" id="cards">
+      <div class="card" id="BTC">
+        <div class="row">
+          <div class="asset">
+            <div class="icon">₿</div>
+            <div>
+              <div class="sym">BTC</div>
+              <div class="name">Bitcoin</div>
+            </div>
+          </div>
+          <div class="price" id="BTC_usd">—</div>
+        </div>
+        <div class="sub">
+          <span id="BTC_ils">—</span>
+          <span id="BTC_note" class="muted"></span>
+        </div>
+        <div class="chart-container">
+          <div class="chart-spinner" id="BTC_chart_spinner">⏳</div>
+          <canvas id="BTC_chart"></canvas>
+        </div>
+        <div class="gauge-container">
+          <canvas id="BTC_gauge" width="120" height="60"></canvas>
+        </div>
+        <div class="levels">
+          <span class="support">Nearest support: <span id="BTC_support_price">—</span></span>
+          <span class="resistance">Nearest resistance: <span id="BTC_resistance_price">—</span></span>
+        </div>
+        <div class="volume-indicator" id="BTC_volume_indicator">
+          <span>Volume (24h):</span> <span id="BTC_volume_24h"> —</span> <span id="BTC_volume_status"></span>
+        </div>
+        <div class="volume-stats muted">
+          <span>20d daily avg:</span> <span id="BTC_volume_avg">—</span>
+        </div>
+      </div>
+
+      <div class="card" id="ETH">
+        <div class="row">
+          <div class="asset">
+            <div class="icon">Ξ</div>
+            <div>
+              <div class="sym">ETH</div>
+              <div class="name">Ethereum</div>
+            </div>
+          </div>
+          <div class="price" id="ETH_usd">—</div>
+        </div>
+        <div class="sub">
+          <span id="ETH_ils">—</span>
+          <span id="ETH_note" class="muted"></span>
+        </div>
+        <div class="chart-container">
+          <div class="chart-spinner" id="ETH_chart_spinner">⏳</div>
+          <canvas id="ETH_chart"></canvas>
+        </div>
+        <div class="gauge-container">
+          <canvas id="ETH_gauge" width="120" height="60"></canvas>
+        </div>
+        <div class="levels">
+          <span class="support">Nearest support: <span id="ETH_support_price">—</span></span>
+          <span class="resistance">Nearest resistance: <span id="ETH_resistance_price">—</span></span>
+        </div>
+        <div class="volume-indicator" id="ETH_volume_indicator">
+          <span>Volume (24h):</span> <span id="ETH_volume_24h"> —</span> <span id="ETH_volume_status"></span>
+        </div>
+        <div class="volume-stats muted">
+          <span>20d daily avg:</span> <span id="ETH_volume_avg">—</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="muted">
+      Source: Coinbase Spot, CryptoCompare & Exchange Rates (Binance fallback if failure). Auto refresh every 15 seconds.
+    </footer>
+  </div>
+
+  <script>
+    // === Settings ===
+    const REFRESH_MS = 15000; // Refresh frequency in milliseconds
+    const ENDPOINTS = {
+      BTC_USD: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
+      ETH_USD: 'https://api.coinbase.com/v2/prices/ETH-USD/spot',
+      USD_RATES: 'https://api.coinbase.com/v2/exchange-rates?currency=USD',
+      // Fallbacks (Binance USDT≈USD)
+      BINANCE_BTC: 'https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT',
+      BINANCE_ETH: 'https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT',
+      // CryptoCompare Historical Data (20 days)
+      CC_HISTO_DAILY: 'https://min-api.cryptocompare.com/data/v2/histoday?limit=19&aggregate=1&fsym=',
+    };
+
+    // === Format Helpers ===
+    const fmtUSD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    const fmtILS = new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' });
+    const fmtTime = () => new Date().toLocaleString('en-US', { hour12: false });
+    const fmtVolume = (num) => {
+        if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+        if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+        return num.toFixed(0);
+    };
+
+    /**
+     * Stores Chart.js instances to destroy them before re-rendering.
+     * @type {object<string, import('chart.js').Chart>}
+     */
+    const chartInstances = {};
+
+    /**
+     * Fetches JSON data from a URL with no-cache headers.
+     * @param {string} url
+     * @returns {Promise<any>}
+     */
+    async function fetchJson(url) {
+      const res = await fetch(url, {
+        cache: 'no-store'
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    /**
+     * Gets the USD to ILS exchange rate. Returns null on failure.
+     * @returns {Promise<number|null>}
+     */
+    async function getUsdToIls() {
+      try {
+        const data = await fetchJson(ENDPOINTS.USD_RATES);
+        const ils = Number(data?.data?.rates?.ILS);
+        if (!isFinite(ils)) throw new Error('No ILS rate');
+        return ils;
+      } catch (e) {
+        console.warn('USD→ILS rate failed', e);
+        window.lastFetchError = e.message || e.toString();
+        return null;
+      }
+    }
+
+    /**
+     * Fetches the spot USD price for a given asset, with a Binance fallback.
+     * @param {'BTC'|'ETH'} asset
+     * @returns {Promise<{price: number, source: string}>}
+     */
+    async function getSpotUSD(asset) {
+      try {
+        const url = asset === 'BTC' ? ENDPOINTS.BTC_USD : ENDPOINTS.ETH_USD;
+        const data = await fetchJson(url);
+        const amt = Number(data?.data?.amount);
+        if (!isFinite(amt)) throw new Error('Bad spot amount');
+        return {
+          price: amt,
+          source: 'Coinbase'
+        };
+      } catch (e) {
+        console.warn(`Coinbase ${asset} failed, falling back to Binance`, e);
+        window.lastFetchError = e.message || e.toString();
+        try {
+          const url = asset === 'BTC' ? ENDPOINTS.BINANCE_BTC : ENDPOINTS.BINANCE_ETH;
+          const data = await fetchJson(url);
+          const amt = Number(data?.price);
+          if (!isFinite(amt)) throw new Error('Bad binance price');
+          return {
+            price: amt,
+            source: 'Binance (USDT≈USD)'
+          };
+        } catch (e2) {
+          console.error(`${asset} failed on all sources`, e2);
+          window.lastFetchError = e2.message || e2.toString();
+          throw e2;
+        }
+      }
+    }
+
+    /**
+     * Fetches 20-day historical price and volume data from CryptoCompare.
+     * @param {'BTC'|'ETH'} asset
+     * @returns {Promise<Array<{time: number, price: number, volume: number}>>}
+     */
+    async function fetchHistoricalData(asset) {
+      try {
+        const url = `${ENDPOINTS.CC_HISTO_DAILY}${asset}&tsym=USD`;
+        const data = await fetchJson(url);
+        if (!data?.Data?.Data) throw new Error('No historical prices');
+        return data.Data.Data.map(item => ({ time: item.time * 1000, price: item.close, volume: item.volumeto }));
+      } catch (e) {
+        console.error(`Failed to fetch historical data for ${asset}`, e);
+        window.lastFetchError = e.message || e.toString();
+        return [];
+      }
+    }
+    
+    /**
+     * Calculates the support (min) and resistance (max) from historical data.
+     * @param {Array<{time: number, price: number, volume: number}>} historicalData
+     * @returns {{support: number|null, resistance: number|null}}
+     */
+    function calculateLevels(historicalData) {
+        if (historicalData.length === 0) {
+            return { support: null, resistance: null };
+        }
+        const prices = historicalData.map(d => d.price);
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        return { support: min, resistance: max };
+    }
+    
+    /**
+     * Calculates the average volume from historical data.
+     * @param {Array<{time: number, price: number, volume: number}>} historicalData
+     * @returns {number}
+     */
+    function calculateAverageVolume(historicalData) {
+        if (historicalData.length === 0) {
+            return 0;
+        }
+        const totalVolume = historicalData.reduce((sum, item) => sum + item.volume, 0);
+        return totalVolume / historicalData.length;
+    }
+
+    /**
+     * Renders a line chart for the given asset using Chart.js.
+     * @param {'BTC'|'ETH'} asset
+     * @param {Array<{time: number, price: number, volume: number}>} prices
+     * @param {{support: number|null, resistance: number|null}} levels
+     */
+    function renderChart(asset, prices, levels) {
+      const canvasEl = document.getElementById(`${asset}_chart`);
+      const spinnerEl = document.getElementById(`${asset}_chart_spinner`);
+      if (spinnerEl) spinnerEl.style.display = 'none';
+      if (chartInstances[asset]) {
+        chartInstances[asset].destroy();
+      }
+
+      if (prices.length === 0 || !canvasEl) {
+        return;
+      }
+      
+      const labels = prices.map(p => new Date(p.time).toLocaleDateString());
+      const data = prices.map(p => p.price);
+      
+      const isUp = data[data.length - 1] >= data[0];
+      const chartColor = getComputedStyle(document.documentElement).getPropertyValue(isUp ? '--up' : '--down');
+      
+      const annotations = [];
+      if (levels.resistance != null) {
+        annotations.push({
+          type: 'line',
+          scaleID: 'y',
+          value: levels.resistance,
+          borderColor: 'rgba(255, 99, 132, 0.7)',
+          borderWidth: 1,
+          borderDash: [5, 5],
+          label: {
+            content: 'Resistance',
+            enabled: true,
+            position: 'end',
+            color: 'rgba(255, 99, 132, 1)',
+            font: {
+                size: 10,
+            }
+          }
+        });
+      }
+      if (levels.support != null) {
+        annotations.push({
+          type: 'line',
+          scaleID: 'y',
+          value: levels.support,
+          borderColor: 'rgba(54, 162, 235, 0.7)',
+          borderWidth: 1,
+          borderDash: [5, 5],
+          label: {
+            content: 'Support',
+            enabled: true,
+            position: 'end',
+            color: 'rgba(54, 162, 235, 1)',
+            font: {
+                size: 10,
+            }
+          }
+        });
+      }
+
+      chartInstances[asset] = new Chart(canvasEl, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            borderColor: chartColor,
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false,
+            tension: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              display: false,
+            },
+            y: {
+              display: false,
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return fmtUSD.format(context.raw);
+                }
+              }
+            },
+            annotation: {
+              annotations: annotations
+            }
+          }
+        }
+      });
+    }
+
+    /**
+     * Renders the volume gauge (needle) for current vs. average volume.
+     * @param {'BTC'|'ETH'} asset
+     * @param {number} currentVolume
+     * @param {number} averageVolume
+     */
+    function renderVolumeGauge(asset, currentVolume, averageVolume) {
+      const gaugeEl = document.getElementById(`${asset}_gauge`);
+      if (!gaugeEl || !averageVolume || !currentVolume) return;
+      const ctx = gaugeEl.getContext('2d');
+      ctx.clearRect(0, 0, gaugeEl.width, gaugeEl.height);
+
+      // ratio: 1 = average, <1 = low, >1 = high, clamp 0-2
+      let ratio = averageVolume ? currentVolume / averageVolume : 0;
+      ratio = Math.max(0, Math.min(ratio, 2));
+      // angle: PI (left) to 0 (right), 0.2PI..0.8PI is the main range
+      let angle = Math.PI * (1 - (Math.min(ratio, 1) * 0.8 + (ratio > 1 ? (ratio - 1) * 0.2 : 0)));
+
+      // background arc
+      ctx.beginPath();
+      ctx.arc(60, 60, 48, Math.PI, 0, false);
+      ctx.lineWidth = 16;
+      ctx.strokeStyle = '#222e4d';
+      ctx.stroke();
+
+      // colored arc
+      ctx.beginPath();
+      ctx.arc(60, 60, 48, Math.PI, Math.PI + angle, false);
+      ctx.lineWidth = 16;
+      ctx.strokeStyle = ratio >= 1 ? '#18c77c' : '#ff6b6b';
+      ctx.stroke();
+
+      // needle
+      const needleAngle = Math.PI + angle;
+      ctx.save();
+      ctx.translate(60, 60);
+      ctx.rotate(needleAngle);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -48);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#ffe680';
+      ctx.stroke();
+      ctx.restore();
+
+      // percent text
+      ctx.font = "14px sans-serif";
+      ctx.fillStyle = "#e9eefc";
+      ctx.textAlign = "center";
+      ctx.fillText((ratio*100).toFixed(0) + "%", 60, 54);
+    }
+
+    /**
+     * Renders the asset card with the given prices.
+     * @param {'BTC'|'ETH'} asset
+     * @param {number} usdPrice
+     * @param {number|null} usdToIls
+     * @param {string} sourceTag
+     */
+    function renderAsset(asset, usdPrice, usdToIls, sourceTag) {
+      const usdEl = document.getElementById(`${asset}_usd`);
+      const ilsEl = document.getElementById(`${asset}_ils`);
+      const noteEl = document.getElementById(`${asset}_note`);
+
+      if (usdEl) usdEl.textContent = fmtUSD.format(usdPrice);
+      if (ilsEl) {
+        if (usdToIls) {
+          ilsEl.textContent = `≈ ${fmtILS.format(usdPrice * usdToIls)}`;
+        } else {
+          ilsEl.textContent = '— (no ILS rate)';
+        }
+      }
+      if (noteEl) noteEl.textContent = sourceTag ? `Source: ${sourceTag}` : '';
+    }
+
+    /**
+     * Renders the support and resistance levels.
+     * @param {'BTC'|'ETH'} asset
+     * @param {{support: number|null, resistance: number|null}} levels
+     */
+    function renderLevels(asset, levels) {
+      const supportEl = document.getElementById(`${asset}_support_price`);
+      const resistanceEl = document.getElementById(`${asset}_resistance_price`);
+
+      if (supportEl) supportEl.textContent = levels.support != null ? fmtUSD.format(levels.support) : '—';
+      if (resistanceEl) resistanceEl.textContent = levels.resistance != null ? fmtUSD.format(levels.resistance) : '—';
+    }
+    
+    /**
+     * Renders the volume indicator.
+     * @param {'BTC'|'ETH'} asset
+     * @param {number} currentVolume
+     * @param {number} averageVolume
+     */
+    function renderVolumeIndicator(asset, currentVolume, averageVolume) {
+        const indicatorEl = document.getElementById(`${asset}_volume_indicator`);
+        const volumeEl = document.getElementById(`${asset}_volume_24h`);
+        const statusEl = document.getElementById(`${asset}_volume_status`);
+        const avgVolumeEl = document.getElementById(`${asset}_volume_avg`);
+
+        if (!indicatorEl || !volumeEl || !statusEl || !avgVolumeEl) return;
+
+        volumeEl.textContent = `$${fmtVolume(currentVolume)}`;
+        avgVolumeEl.textContent = `$${fmtVolume(averageVolume)}`;
+
+        indicatorEl.classList.remove('high', 'low');
+
+        if (currentVolume > averageVolume) {
+            indicatorEl.classList.add('high');
+            statusEl.textContent = ` (Above average)`;
+        } else {
+            indicatorEl.classList.add('low');
+            statusEl.textContent = ` (Below average)`;
+        }
+    }
+
+    /**
+     * Renders an error message for an asset.
+     * @param {'BTC'|'ETH'} asset
+     * @param {string} msg
+     */
+    function renderError(asset, msg) {
+      const usdEl = document.getElementById(`${asset}_usd`);
+      const ilsEl = document.getElementById(`${asset}_ils`);
+      const noteEl = document.getElementById(`${asset}_note`);
+      const supportEl = document.getElementById(`${asset}_support_price`);
+      const resistanceEl = document.getElementById(`${asset}_resistance_price`);
+      const volumeEl = document.getElementById(`${asset}_volume_24h`);
+      const volumeStatusEl = document.getElementById(`${asset}_volume_status`);
+      const indicatorEl = document.getElementById(`${asset}_volume_indicator`);
+      const avgVolumeEl = document.getElementById(`${asset}_volume_avg`);
+
+      if (usdEl) usdEl.innerHTML = `<span class="err">Error</span>`;
+      if (ilsEl) ilsEl.textContent = '—';
+      if (noteEl) {
+        noteEl.textContent = msg || '';
+        if (window.lastFetchError) {
+          noteEl.textContent += ` (${window.lastFetchError})`;
+        }
+      }
+      if (supportEl) supportEl.textContent = '—';
+      if (resistanceEl) resistanceEl.textContent = '—';
+      if (volumeEl) volumeEl.textContent = '—';
+      if (volumeStatusEl) volumeStatusEl.textContent = '';
+      if (avgVolumeEl) avgVolumeEl.textContent = '—';
+      
+      if (indicatorEl) {
+        indicatorEl.classList.remove('high', 'low');
+      }
+      // also clear gauge
+      const gaugeEl = document.getElementById(`${asset}_gauge`);
+      if (gaugeEl) {
+        const ctx = gaugeEl.getContext('2d');
+        ctx.clearRect(0, 0, gaugeEl.width, gaugeEl.height);
+      }
+    }
+
+    /**
+     * Updates all crypto prices by fetching data from APIs.
+     */
+    async function updateAll() {
+      const lastUpdatedEl = document.getElementById('lastUpdated');
+      if (lastUpdatedEl) lastUpdatedEl.textContent = 'Updating…';
+
+      // Show spinners
+      const btcSpinner = document.getElementById('BTC_chart_spinner');
+      const ethSpinner = document.getElementById('ETH_chart_spinner');
+      if (btcSpinner) btcSpinner.style.display = 'block';
+      if (ethSpinner) ethSpinner.style.display = 'block';
+
+      window.lastFetchError = null;
+      try {
+        const [btc, eth, usdToIls, btcHistory, ethHistory] = await Promise.all([
+          getSpotUSD('BTC'),
+          getSpotUSD('ETH'),
+          getUsdToIls(),
+          fetchHistoricalData('BTC'),
+          fetchHistoricalData('ETH'),
+        ]);
+        
+        const btcLevels = calculateLevels(btcHistory);
+        const ethLevels = calculateLevels(ethHistory);
+        
+        renderAsset('BTC', btc.price, usdToIls, btc.source);
+        renderAsset('ETH', eth.price, usdToIls, eth.source);
+        renderChart('BTC', btcHistory, btcLevels);
+        renderChart('ETH', ethHistory, ethLevels);
+        renderLevels('BTC', btcLevels);
+        renderLevels('ETH', ethLevels);
+
+        if (btcHistory.length > 0) {
+          const btcAvgVolume = calculateAverageVolume(btcHistory);
+          renderVolumeIndicator('BTC', btcHistory[btcHistory.length - 1].volume, btcAvgVolume);
+          renderVolumeGauge('BTC', btcHistory[btcHistory.length - 1].volume, btcAvgVolume);
+        } else {
+          renderError('BTC', 'No historical data available.');
+        }
+
+        if (ethHistory.length > 0) {
+          const ethAvgVolume = calculateAverageVolume(ethHistory);
+          renderVolumeIndicator('ETH', ethHistory[ethHistory.length - 1].volume, ethAvgVolume);
+          renderVolumeGauge('ETH', ethHistory[ethHistory.length - 1].volume, ethAvgVolume);
+        } else {
+          renderError('ETH', 'No historical data available.');
+        }
+        
+        if (lastUpdatedEl) lastUpdatedEl.textContent = `Updated: ${fmtTime()}`;
+      } catch (e) {
+        console.error('Global update failed', e);
+        window.lastFetchError = e.message || e.toString();
+        renderError('BTC', 'General error. Try refreshing.');
+        renderError('ETH', 'General error. Try refreshing.');
+        if (lastUpdatedEl) lastUpdatedEl.textContent = `Error updating (${fmtTime()})`;
+      } finally {
+        // Always hide spinners
+        const btcSpinner = document.getElementById('BTC_chart_spinner');
+        const ethSpinner = document.getElementById('ETH_chart_spinner');
+        if (btcSpinner) btcSpinner.style.display = 'none';
+        if (ethSpinner) ethSpinner.style.display = 'none';
+      }
+    }
+
+    // Initial refresh and automatic interval
+    updateAll();
+    const interval = setInterval(updateAll, REFRESH_MS);
+
+    // Debounced manual refresh
+    let lastManualRefresh = 0;
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastManualRefresh > 2000) { // 2s cooldown
+        updateAll();
+        lastManualRefresh = now;
+      }
+    });
+
+    // Clean up interval on page unload
+    window.addEventListener('beforeunload', () => clearInterval(interval));
+  </script>
+</body>
+</html>
