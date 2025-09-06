@@ -1,5 +1,5 @@
-<!doctype html>
-<html lang="en" dir="ltr">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -13,8 +13,6 @@
       --up: #18c77c;
       --down: #ff6b6b;
       --accent: #6aa4ff;
-      --low-volume-bg: #7a88a0;
-      --vol-text-bg: #222e4d;
     }
     * { box-sizing: border-box }
     body {
@@ -51,7 +49,7 @@
     .muted { color: var(--muted); font-size: 13px; }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
       gap: 24px;
     }
     .card {
@@ -78,19 +76,11 @@
     a { color: #a9c7ff }
     .chart-container { margin-top: 22px; position: relative; height: 260px; }
     .gauge-container {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      margin-top: 18px;
-      margin-bottom: 18px;
-      position: relative;
-      height: 90px;
-      flex-direction: column;
-      align-items: center;
+      width: 100%; display: flex; justify-content: center; margin-top: 18px; margin-bottom: 18px;
+      position: relative; height: 90px; flex-direction: column; align-items: center;
     }
     .gauge-canvas-wrap {
-      width: 120px;
-      height: 60px;
+      width: 140px; height: 70px;
       position: relative;
       display: flex;
       justify-content: center;
@@ -100,12 +90,12 @@
       display: block;
       text-align: center;
       margin-top: 6px;
-      font-size: 12px;
+      font-size: 13px;
       color: #a9c7ff;
       letter-spacing: 0.5px;
     }
     .gauge-percent .value {
-      font-size: 16px;
+      font-size: 18px;
       color: #ffe680;
       font-weight: bold;
       margin-left: 3px;
@@ -116,7 +106,7 @@
     .levels .resistance { color: var(--down);}
     .volume-indicator { margin-top: 8px; font-size: 13px; text-align: center; border-radius: 8px; padding: 4px; background: rgba(255,255,255,0.1); }
     .volume-indicator.high { background: var(--accent); color: black; }
-    .volume-indicator.low { background: var(--low-volume-bg); color: var(--ink);}
+    .volume-indicator.low { background: #7a88a0; color: var(--ink);}
     .volume-stats { margin-top: 8px; font-size: 12px; text-align: center;}
     @media (max-width: 600px) {
       body { font-size: 18px; }
@@ -127,11 +117,11 @@
       .card { padding: 12px; min-height: 340px;}
       .chart-container { height: 170px; }
       .gauge-container { height: 84px; margin-bottom: 8px; }
-      .gauge-canvas-wrap { width: 80px; height: 36px;}
+      .gauge-canvas-wrap { width: 100px; height: 50px;}
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.2/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@4.0.0/dist/chartjs-plugin-annotation.umd.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -165,7 +155,7 @@
         </div>
         <div class="gauge-container">
           <div class="gauge-canvas-wrap">
-            <canvas id="BTC_gauge" width="120" height="60"></canvas>
+            <canvas id="BTC_gauge" width="140" height="70"></canvas>
           </div>
           <div class="gauge-percent" id="BTC_gauge_percent"></div>
         </div>
@@ -202,7 +192,7 @@
         </div>
         <div class="gauge-container">
           <div class="gauge-canvas-wrap">
-            <canvas id="ETH_gauge" width="120" height="60"></canvas>
+            <canvas id="ETH_gauge" width="140" height="70"></canvas>
           </div>
           <div class="gauge-percent" id="ETH_gauge_percent"></div>
         </div>
@@ -223,7 +213,7 @@
     </footer>
   </div>
   <script>
-    // ========== הגדרות ==========
+    // ==== UTILITIES ====
     const REFRESH_MS = 15000;
     function getHistoryUrl(asset) {
       return `https://min-api.cryptocompare.com/data/v2/histominute?fsym=${asset}&tsym=USD&limit=768&aggregate=15`;
@@ -253,7 +243,7 @@
     }
     const chartInstances = {};
 
-    // fetchJson עם דיבאג שגיאה
+    // ==== DATA FETCH ====
     async function fetchJson(url) {
       try {
         const res = await fetch(url, { cache: 'no-store' });
@@ -289,7 +279,7 @@
       } catch (e) {
         window.lastFetchError = e.message || e.toString();
         try {
-          const url2 = asset === 'BTC' ? ENDPOINTS.BINANCE_BTC : ENDPOINTS.ETH;
+          const url2 = asset === 'BTC' ? ENDPOINTS.BINANCE_BTC : ENDPOINTS.BINANCE_ETH;
           const data = await fetchJson(url2);
           const amt = Number(data?.price);
           if (!isFinite(amt)) throw new Error('Bad binance price');
@@ -332,6 +322,8 @@
       const totalVolume = volumes.reduce((sum, v) => sum + v, 0);
       return totalVolume / volumes.length;
     }
+
+    // ==== CHART ====
     function renderChart(asset, prices, levels) {
       const canvasEl = document.getElementById(`${asset}_chart`);
       if (chartInstances[asset]) chartInstances[asset].destroy();
@@ -340,9 +332,6 @@
         const d = new Date(p.time);
         const h = d.getHours().toString().padStart(2, '0');
         const m = d.getMinutes().toString().padStart(2, '0');
-        if (h === '00' && m === '00') {
-          return d.toLocaleDateString() + ' 00:00';
-        }
         return h + ':' + m;
       });
       const data = prices.map(p => p.price);
@@ -410,11 +399,12 @@
               ticks: {
                 color: '#e9eefc',
                 maxRotation: 32,
-                autoSkip: true,
-                maxTicksLimit: 20,
-                callback: function(val, idx, values) {
-                  if (idx === 0 || idx === labels.length - 1) return this.getLabelForValue(val);
-                  return idx % 50 === 0 ? this.getLabelForValue(val) : '';
+                autoSkip: false,
+                maxTicksLimit: 10,
+                callback: function(val, idx) {
+                  if (labels.length <= 10) return this.getLabelForValue(val);
+                  const every = Math.ceil(labels.length/10);
+                  return idx % every === 0 ? this.getLabelForValue(val) : '';
                 }
               },
               grid: { color: 'rgba(100,150,230,0.06)' }
@@ -452,7 +442,8 @@
         }
       });
     }
-    // מחוג ווליום עם קשת אינטואיטיבית
+
+    // ==== GAUGE (סקאלה בלבד - בלי מחוג) ====
     function renderVolumeGauge(asset, currentVolume, averageVolume) {
       const gaugeEl = document.getElementById(`${asset}_gauge`);
       const percentEl = document.getElementById(`${asset}_gauge_percent`);
@@ -460,65 +451,45 @@
       const ctx = gaugeEl.getContext('2d');
       ctx.clearRect(0, 0, gaugeEl.width, gaugeEl.height);
 
-      // רקע אפור מלא (חצי עיגול)
+      // מרכז חצי-העיגול בבסיס הקנבס
+      const cx = gaugeEl.width / 2;
+      const cy = gaugeEl.height;
+
+      // רקע אפור (חצי עיגול)
       ctx.beginPath();
-      ctx.arc(60, 60, 48, Math.PI, 0, false);
-      ctx.lineWidth = 16;
+      ctx.arc(cx, cy, 52, Math.PI, 0, false);
+      ctx.lineWidth = 15;
       ctx.strokeStyle = '#222e4d';
       ctx.stroke();
 
-      // אם אין נתונים, לא מציירים קשת צבעונית ומציבים אחוז 0
-      if (!averageVolume || !currentVolume) {
-        percentEl.innerHTML = `<span>Volume % <span class="value">0%</span></span>`;
-        return;
-      }
+      // חישוב ratio
+      let ratio = (averageVolume && currentVolume) ? currentVolume / averageVolume : 0;
+      ratio = Math.max(0, Math.min(ratio, 2)); // 0..2
 
-      let ratio = averageVolume ? currentVolume / averageVolume : 0;
-      ratio = Math.max(0, Math.min(ratio, 2)); // 0..2 (0%-200%)
-
-      // קשת צבעונית: מהשמאל עד לערך הנוכחי
-      let startAngle = Math.PI;
-      let endAngle = Math.PI * (1 - ratio);
+      // קשת צבעונית עד אחוז הווליום
+      const angle = Math.PI - ratio * (Math.PI/2);
       ctx.beginPath();
-      ctx.arc(60, 60, 48, startAngle, startAngle + (endAngle - startAngle), false);
-      ctx.lineWidth = 16;
+      ctx.arc(cx, cy, 52, Math.PI, angle, true);
+      ctx.lineWidth = 15;
       ctx.strokeStyle = ratio >= 1 ? '#18c77c' : '#ff6b6b';
       ctx.stroke();
 
-      // מחוג (מעל הסקאלה)
-      const needleAngle = Math.PI + Math.PI * (1 - ratio);
-      ctx.save();
-      ctx.translate(60, 60);
-      ctx.rotate(needleAngle);
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, -48);
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = '#ffe680';
-      ctx.shadowColor = "#ffe680";
-      ctx.shadowBlur = 6;
-      ctx.stroke();
-      ctx.restore();
-
-      // הצגת אחוז מתחת למד, קטן ועם כיתוב "Volume %"
       percentEl.innerHTML = `<span>Volume % <span class="value">${(ratio*100).toFixed(0)}%</span></span>`;
     }
 
-    // שגיאה בגרף — תציג שגיאה ברורה מתחת לגרף
+    // ==== HELPERS ====
     function renderError(asset, msg) {
       const errorMsgEl = document.getElementById(`${asset}_error_msg`);
       if (errorMsgEl) {
         errorMsgEl.textContent = msg || window.lastFetchError || 'Unknown error';
         errorMsgEl.style.display = 'block';
       }
-      // מדפיס גם לקונסול אוטומטית
       console.error(`Error for ${asset}:`, msg || window.lastFetchError || 'Unknown error');
     }
     function clearError(asset) {
       const errorMsgEl = document.getElementById(`${asset}_error_msg`);
       if (errorMsgEl) errorMsgEl.style.display = 'none';
     }
-
     function renderAsset(asset, usdPrice, usdToIls, sourceTag) {
       const usdEl = document.getElementById(`${asset}_usd`);
       const ilsEl = document.getElementById(`${asset}_ils`);
@@ -557,6 +528,7 @@
       }
     }
 
+    // ==== MAIN UPDATE ====
     async function updateAll() {
       const lastUpdatedEl = document.getElementById('lastUpdated');
       if (lastUpdatedEl) lastUpdatedEl.textContent = 'Updating…';
@@ -588,6 +560,7 @@
           renderVolumeGauge('BTC', lastVolume, btcAvgVolume);
         } else {
           renderError('BTC', window.lastFetchError || 'No historical data available.');
+          renderVolumeGauge('BTC', 0, 0);
         }
         if (ethHistory.length > 0) {
           const ethAvgVolume = calculateAverageVolume(ethHistory);
@@ -598,11 +571,14 @@
           renderVolumeGauge('ETH', lastVolume, ethAvgVolume);
         } else {
           renderError('ETH', window.lastFetchError || 'No historical data available.');
+          renderVolumeGauge('ETH', 0, 0);
         }
         if (lastUpdatedEl) lastUpdatedEl.textContent = `Updated: ${fmtTime()}`;
       } catch (e) {
         renderError('BTC', window.lastFetchError || 'General error. Try refreshing.');
         renderError('ETH', window.lastFetchError || 'General error. Try refreshing.');
+        renderVolumeGauge('BTC', 0, 0);
+        renderVolumeGauge('ETH', 0, 0);
         if (lastUpdatedEl) lastUpdatedEl.textContent = `Error updating (${fmtTime()}): ${window.lastFetchError||e.message}`;
       }
     }
